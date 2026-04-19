@@ -8,8 +8,6 @@ Many captioning tools can convert speech into text, but they still struggle to d
 
 In P-project, the main goal was to prove that an Android app could be connected to a full multimodal pipeline. In Graduation Project 2, the frontend role became more important: the app had to support a more stable live demo, dynamic backend address updates, and clearer UI feedback while the backend model path evolved from a custom fusion structure to a Qwen2.5-Omni based summary pipeline.
 
-> Suggested screenshot placement: insert the main live camera screen directly below this section. If you want to show multiple screens, place the home screen and record/history screen below it.
-
 ![MUTON Android main screen](https://github.com/user-attachments/assets/67b02611-b136-4166-8215-c3986d915b1e)
 
 ![MUTON Android live screen](https://github.com/user-attachments/assets/ec7bd87a-aca3-4b09-bdc4-7fe2890d4703)
