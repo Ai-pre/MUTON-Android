@@ -37,6 +37,9 @@ https://raw.githubusercontent.com/Ai-pre/MUTON/server_main/backend_url.json
 ```
 
 ## Run
+<img width="940" height="868" alt="image" src="https://github.com/user-attachments/assets/67b02611-b136-4166-8215-c3986d915b1e" />
+
+<img width="447" height="882" alt="image" src="https://github.com/user-attachments/assets/ec7bd87a-aca3-4b09-bdc4-7fe2890d4703" />
 
 Open the project in Android Studio and run the `app` module on a device or emulator with camera and microphone access.
 
