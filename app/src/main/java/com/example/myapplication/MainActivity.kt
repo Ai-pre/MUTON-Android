@@ -704,7 +704,7 @@ class MainActivity : BaseActivity() {
         stopAllStreaming()
         binding.txtFaceResult.setText(R.string.live_status_summary)
 
-        OpenAiSummaryService.summarizeConversation(conversationForSummary) { apiSummary ->
+        OpenAiSummaryService.summarizeConversation(serverBaseUrl, conversationForSummary) { apiSummary ->
             runOnUiThread {
                 ConversationRecordStore.saveTodayRecord(
                     context = this,

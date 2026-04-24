@@ -4,7 +4,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 
@@ -17,73 +16,47 @@ object OpenAiSummaryService {
 
     private val client = OkHttpClient()
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+    private const val ENDPOINT_SUMMARIZE_CONVERSATION = "/summarize_conversation_record"
 
     fun summarizeConversation(
+        baseUrl: String?,
         conversationText: String,
         onResult: (String?) -> Unit,
     ) {
-        summarizeConversationDetailed(conversationText) { result ->
+        summarizeConversationDetailed(baseUrl, conversationText) { result ->
             onResult(result.text)
         }
     }
 
     fun summarizeConversationDetailed(
+        baseUrl: String?,
         conversationText: String,
         onResult: (SummaryResult) -> Unit,
     ) {
-        val apiKey = BuildConfig.OPENAI_API_KEY.trim()
-        if (apiKey.isBlank()) {
-            onResult(SummaryResult(errorMessage = "OpenAI API 키가 설정되어 있지 않아요."))
+        val normalizedBaseUrl = baseUrl?.trim()?.removeSuffix("/").orEmpty()
+        if (normalizedBaseUrl.isBlank()) {
+            onResult(SummaryResult(errorMessage = "Backend URL is not available."))
             return
         }
 
         if (conversationText.isBlank()) {
-            onResult(SummaryResult(errorMessage = "선택한 기록에 다시 요약할 대화 내용이 부족해요."))
+            onResult(SummaryResult(errorMessage = "Conversation text is empty."))
             return
         }
 
-        val input = JSONArray().apply {
-            put(
-                JSONObject().apply {
-                    put("role", "user")
-                    put(
-                        "content",
-                        JSONArray().put(
-                            JSONObject().apply {
-                                put("type", "input_text")
-                                put("text", conversationText)
-                            },
-                        ),
-                    )
-                },
-            )
-        }
-
         val payload = JSONObject().apply {
-            put("model", BuildConfig.OPENAI_SUMMARY_MODEL)
-            put(
-                "instructions",
-                "You summarize conversations in Korean. Return exactly one concise Korean sentence that captures the overall conversation topic and intent. Do not add labels, quotes, bullets, or explanations.",
-            )
-            put("input", input)
-            put("max_output_tokens", 60)
-            put("truncation", "auto")
+            put("conversation_text", conversationText)
         }
 
         val request = Request.Builder()
-            .url("https://api.openai.com/v1/responses")
-            .addHeader("Authorization", "Bearer $apiKey")
+            .url("$normalizedBaseUrl$ENDPOINT_SUMMARIZE_CONVERSATION")
             .addHeader("Content-Type", "application/json")
             .post(payload.toString().toRequestBody(jsonMediaType))
             .build()
 
         client.newCall(request).enqueue(object : okhttp3.Callback {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
-                onResult(
-                    SummaryResult(
-                        errorMessage = "OpenAI 요청에 실패했어요. 네트워크 상태를 확인해주세요.",
-                    ),
-                )
+                onResult(SummaryResult(errorMessage = "Conversation summary request failed."))
             }
 
             override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
@@ -97,11 +70,7 @@ object OpenAiSummaryService {
 
                     val text = parseOutputText(body)?.trim()?.takeIf(String::isNotBlank)
                     if (text.isNullOrBlank()) {
-                        onResult(
-                            SummaryResult(
-                                errorMessage = "요약 결과가 비어 있어요. 잠시 후 다시 시도해주세요.",
-                            ),
-                        )
+                        onResult(SummaryResult(errorMessage = "Conversation summary is empty."))
                     } else {
                         onResult(SummaryResult(text = text))
                     }
@@ -113,36 +82,22 @@ object OpenAiSummaryService {
     private fun parseOutputText(body: String): String? {
         return runCatching {
             val json = JSONObject(body)
-
-            json.optJSONArray("output")
-                ?.let { output ->
-                    for (i in 0 until output.length()) {
-                        val item = output.optJSONObject(i) ?: continue
-                        val content = item.optJSONArray("content") ?: continue
-                        for (j in 0 until content.length()) {
-                            val contentItem = content.optJSONObject(j) ?: continue
-                            val text = contentItem.optString("text")
-                            if (text.isNotBlank()) return@runCatching text
-                        }
-                    }
-                    null
-                }
-                ?: json.optString("output_text").ifBlank { null }
+            json.optString("title").ifBlank { null }
         }.getOrNull()
     }
 
     private fun parseErrorMessage(code: Int, body: String): String {
         val apiMessage = runCatching {
             val json = JSONObject(body)
-            json.optJSONObject("error")?.optString("message").orEmpty()
+            json.optString("detail").ifBlank {
+                json.optString("error")
+            }
         }.getOrNull().orEmpty()
 
         val mappedMessage = when (code) {
-            401 -> "OpenAI API 키가 올바르지 않거나 만료되었어요."
-            402 -> "OpenAI 결제 또는 크레딧 상태를 확인해주세요."
-            403 -> "현재 API 키로는 이 모델을 사용할 수 없어요."
-            429 -> "요청 한도에 걸렸어요. 잠시 후 다시 시도해주세요."
-            else -> "OpenAI 요약 요청에 실패했어요. (HTTP $code)"
+            404 -> "Summary endpoint is unavailable on the backend."
+            429 -> "Summary request was rate limited."
+            else -> "Backend summary request failed. (HTTP $code)"
         }
 
         return if (apiMessage.isBlank()) {
