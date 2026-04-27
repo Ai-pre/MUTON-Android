@@ -112,7 +112,3 @@ MUTON-Android/
   build.gradle.kts
   settings.gradle.kts
 ```
-
-## License
-
-This repository does not currently include a dedicated license file. A final open-source license should be added before external redistribution or reuse.
