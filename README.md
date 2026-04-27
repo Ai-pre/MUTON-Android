@@ -1,46 +1,99 @@
 # MUTON-Android
 
-MUTON-Android is the Android client for MUTON, a real-time multimodal dialogue assistance system for hearing-impaired users, especially users who rely on oral communication rather than sign language. The app streams camera frames and audio chunks to the backend, receives subtitles and multimodal summaries, and displays the result in a mobile interface designed for practical conversation support.
+MUTON-Android is the Android client for MUTON, a real-time multimodal dialogue assistance system for hearing-impaired users. The app captures camera frames and microphone audio, streams them to the MUTON backend, and displays subtitles, visual emotion cues, and multimodal summaries in a mobile interface.
 
-## Why This App Exists
+## Contents
 
-Many captioning tools can convert speech into text, but they still struggle to deliver the emotional and contextual cues that matter in real conversation. The Android client exists to make the MUTON backend usable in a real mobile setting by capturing live face and voice input, synchronizing the user interaction flow, and presenting subtitle, visual emotion, and summary output in one place.
+- [Overview](#overview)
+- [App Features](#app-features)
+- [Installation](#installation)
+- [Backend Connection](#backend-connection)
+- [Running On Device](#running-on-device)
+- [Screens](#screens)
+- [Related Repository](#related-repository)
+- [Project Structure](#project-structure)
+- [License](#license)
 
-In P-project, the main goal was to prove that an Android app could be connected to a full multimodal pipeline. In Graduation Project 2, the frontend role became more important: the app had to support a more stable live demo, dynamic backend address updates, and clearer UI feedback while the backend model path evolved from a custom fusion structure to a Qwen2.5-Omni based summary pipeline.
+## Overview
+
+The Android app is the user-facing part of MUTON. While the backend handles STT, face/audio processing, and Qwen2.5-Omni based summary generation, this client focuses on real-time capture, request synchronization, and presenting the result in a practical conversation flow.
+
+In Graduation Project 2, the app was refined for a more stable live demo. It now discovers the active backend address dynamically, keeps the UI compatible with backend model changes, and routes conversation record summaries through the server so API keys are not stored inside the APK.
+
+## App Features
+
+- Camera frame capture for visual context
+- Microphone audio capture for streaming STT
+- Real-time requests to the MUTON backend
+- Subtitle display from finalized speech utterances
+- Visual emotion display from face-frame analysis
+- Multimodal summary display from backend fusion analysis
+- Conversation record screens and server-side record summary requests
+- Dynamic backend URL loading from the main MUTON repository
+
+## Installation
+
+Open the project in Android Studio.
+
+Recommended project configuration:
+
+- `compileSdk`: 35
+- `minSdk`: 28
+- `targetSdk`: 35
+- package namespace: `com.example.myapplication`
+
+Build the app module from Android Studio, or use Gradle from the project root:
+
+```bash
+./gradlew :app:assembleDebug
+```
+
+On Windows PowerShell:
+
+```powershell
+.\gradlew.bat :app:assembleDebug
+```
+
+## Backend Connection
+
+The app reads the active backend URL from the main MUTON repository:
+
+```text
+https://raw.githubusercontent.com/Ai-pre/MUTON/server_main/backend_url.json
+```
+
+The backend URL file points to the current Cloudflare Tunnel address. This keeps the Android app stable even when the server tunnel changes between demos.
+
+Runtime relationship:
+
+- Android sends audio chunks to `/process_audio_chunk`.
+- Android sends camera frames to `/process_video_chunk`.
+- Android requests multimodal summaries from `/get_fusion_analysis`.
+- Android requests conversation record summaries from `/summarize_conversation_record`.
+
+## Running On Device
+
+Before launching the app, make sure the backend server is running and the current Cloudflare Tunnel URL has been published to `backend_url.json`.
+
+The device or emulator must allow:
+
+- Camera access
+- Microphone access
+- Network access
+
+For the live demo, a physical Android device is recommended because camera, microphone, and network timing are closer to the intended use case.
+
+## Screens
 
 ![MUTON Android main screen](https://github.com/user-attachments/assets/67b02611-b136-4166-8215-c3986d915b1e)
 
 ![MUTON Android live screen](https://github.com/user-attachments/assets/ec7bd87a-aca3-4b09-bdc4-7fe2890d4703)
 
-## What The Android App Does
+## Related Repository
 
-- captures camera frames for visual input
-- captures microphone audio for streaming STT
-- sends multimodal requests to the MUTON backend
-- displays visual emotion, subtitle text, and multimodal summary output
-- loads the active backend address dynamically from `backend_url.json`
-- supports the wider mobile flow around the demo, including home, login, settings, and record-related screens
+Backend runtime, API implementation, model training scripts, dataset processing, and wiki documentation are maintained in the main MUTON repository:
 
-## Role In Graduation Project 2
-
-The Android app is not just a thin transport layer. In Graduation Project 2, it became part of the system-level improvement process:
-
-- the backend URL flow was stabilized through remote configuration
-- the live UI was refined so that subtitle, emotion, and summary could be shown together
-- the app remained compatible while the backend summary architecture changed
-- the overall mobile experience was shaped for demonstration and real-time usability rather than model experimentation alone
-
-## Backend Relationship
-
-This repository contains only the Android client. Backend runtime, API details, and model training live in the main repository:
-
-- backend repo: [Ai-pre/MUTON](https://github.com/Ai-pre/MUTON)
-
-The app reads the current backend address from:
-
-```text
-https://raw.githubusercontent.com/Ai-pre/MUTON/server_main/backend_url.json
-```
+- [Ai-pre/MUTON](https://github.com/Ai-pre/MUTON)
 
 ## Project Structure
 
@@ -48,24 +101,18 @@ https://raw.githubusercontent.com/Ai-pre/MUTON/server_main/backend_url.json
 MUTON-Android/
   app/
     src/main/java/com/example/myapplication/
+      MainActivity.kt
+      OpenAiSummaryService.kt
+      ConversationRecordStore.kt
+      RecordDetailActivity.kt
+      HomeActivity.kt
+      SettingsActivity.kt
     src/main/res/
   gradle/
   build.gradle.kts
   settings.gradle.kts
 ```
 
-## Run
+## License
 
-Open the project in Android Studio and run the `app` module on a device or emulator with camera and microphone access.
-
-For the best demo behavior, make sure:
-
-- the backend server is already running
-- the current Cloudflare tunnel URL has been published to `backend_url.json`
-- the device has camera, microphone, and network access
-
-## Notes
-
-- This repository is focused on the Android client experience.
-- The recommended current backend path is `whisper-1` for STT and `Qwen2.5-Omni + ko_stage LoRA` for multimodal summary generation.
-- Detailed API and architecture documentation remain in the main MUTON repository.
+This repository does not currently include a dedicated license file. A final open-source license should be added before external redistribution or reuse.
