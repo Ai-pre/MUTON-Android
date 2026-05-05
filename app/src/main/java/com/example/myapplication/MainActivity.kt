@@ -699,32 +699,45 @@ class MainActivity : BaseActivity() {
             .mapNotNull { it.summary.takeIf(String::isNotBlank) }
             .joinToString("\n")
         val fallbackTitle = formatRecordTitleDate(startedAt)
+        val endedAt = System.currentTimeMillis()
+        val recordDateKey = formatRecordDateKey(endedAt)
         val conversationForSummary = buildConversationForSummary()
+        val appContext = applicationContext
+        val calendarFallbackTitle = getString(R.string.calendar_fallback_title)
 
         stopAllStreaming()
-        binding.txtFaceResult.setText(R.string.live_status_summary)
+
+        ConversationRecordStore.saveTodayRecord(
+            context = this,
+            title = fallbackTitle,
+            subtitle = if (hasContent) speech else "",
+            startedAt = startedAt,
+            endedAt = endedAt,
+            selfSpeech = selfSpeech,
+            selfSummary = selfSummary,
+            otherSpeech = otherSpeech,
+            otherSummary = otherSummary,
+        )
 
         OpenAiSummaryService.summarizeConversation(serverBaseUrl, conversationForSummary) { apiSummary ->
-            runOnUiThread {
-                ConversationRecordStore.saveTodayRecord(
-                    context = this,
-                    title = apiSummary
-                        ?.trim()
-                        ?.takeIf { it.isNotBlank() && it != getString(R.string.calendar_fallback_title) }
-                        ?: fallbackTitle,
-                    subtitle = if (hasContent) speech else "",
-                    startedAt = startedAt,
-                    selfSpeech = selfSpeech,
-                    selfSummary = selfSummary,
-                    otherSpeech = otherSpeech,
-                    otherSummary = otherSummary,
-                )
+            val serverTitle = apiSummary
+                ?.trim()
+                ?.takeIf { it.isNotBlank() && it != calendarFallbackTitle }
+                ?: return@summarizeConversation
 
-                renderStoppedState()
-                startActivity(Intent(this, CalendarActivity::class.java))
-                finish()
+            ConversationRecordStore.updateRecordTitle(
+                context = appContext,
+                dateKey = recordDateKey,
+                createdAt = endedAt,
+                title = serverTitle,
+            ) {
+                Log.d(TAG, "Conversation record title updated from backend summary.")
             }
         }
+
+        renderStoppedState()
+        startActivity(Intent(this, CalendarActivity::class.java))
+        finish()
     }
 
     private fun buildConversationForSummary(): String {
@@ -745,6 +758,10 @@ class MainActivity : BaseActivity() {
 
     private fun formatRecordTitleDate(timeMillis: Long): String {
         return SimpleDateFormat("yyyy.MM.dd", Locale.KOREA).format(Date(timeMillis))
+    }
+
+    private fun formatRecordDateKey(timeMillis: Long): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(Date(timeMillis))
     }
 
     private fun renderSpeechBubble(text: String, speaker: String) {
